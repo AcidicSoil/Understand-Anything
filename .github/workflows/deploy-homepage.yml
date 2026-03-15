@@ -29,10 +29,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: homepage/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        working-directory: homepage
         run: pnpm install
 
       - name: Build
