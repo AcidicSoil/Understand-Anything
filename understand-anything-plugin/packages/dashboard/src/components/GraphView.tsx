@@ -31,6 +31,14 @@ export default function GraphView() {
   const tourHighlightedNodeIds = useDashboardStore((s) => s.tourHighlightedNodeIds);
   const persona = useDashboardStore((s) => s.persona);
 
+  const handleNodeSelect = useCallback(
+    (nodeId: string) => {
+      selectNode(nodeId);
+      openCodeViewer(nodeId);
+    },
+    [selectNode, openCodeViewer],
+  );
+
   const { initialNodes, initialEdges } = useMemo(() => {
     if (!graph)
       return {
@@ -70,6 +78,7 @@ export default function GraphView() {
           searchScore: matchResult?.score,
           isSelected: selectedNodeId === node.id,
           isTourHighlighted: tourHighlightedNodeIds.includes(node.id),
+          onNodeClick: handleNodeSelect,
         },
       };
     });
@@ -181,7 +190,7 @@ export default function GraphView() {
     ];
 
     return { initialNodes: allNodes, initialEdges: laid.edges };
-  }, [graph, searchResults, selectedNodeId, showLayers, tourHighlightedNodeIds, persona]);
+  }, [graph, searchResults, selectedNodeId, showLayers, tourHighlightedNodeIds, persona, handleNodeSelect]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -200,10 +209,7 @@ export default function GraphView() {
       const isGroupNode = graph?.layers?.some((l) => l.id === node.id);
       if (isGroupNode) return;
       selectNode(node.id);
-      const graphNode = graph?.nodes.find((n) => n.id === node.id);
-      if (graphNode?.type === 'file') {
-        openCodeViewer(node.id);
-      }
+      openCodeViewer(node.id);
     },
     [selectNode, openCodeViewer, graph],
   );

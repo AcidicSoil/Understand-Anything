@@ -32,11 +32,13 @@ export interface CustomNodeData extends Record<string, unknown> {
   searchScore?: number;
   isSelected: boolean;
   isTourHighlighted: boolean;
+  onNodeClick?: (nodeId: string) => void;
 }
 
 export type CustomFlowNode = Node<CustomNodeData, "custom">;
 
 export default function CustomNode({
+  id,
   data,
 }: NodeProps<CustomFlowNode>) {
   const barColor = typeColors[data.nodeType] ?? typeColors.file;
@@ -65,8 +67,9 @@ export default function CustomNode({
 
   return (
     <div
-      className={`relative rounded-lg bg-elevated border border-border-subtle ${extraClass} min-w-[180px] max-w-[220px] overflow-hidden transition-all duration-200`}
+      className={`relative rounded-lg bg-elevated border border-border-subtle ${extraClass} min-w-[180px] max-w-[220px] overflow-hidden transition-all duration-200 cursor-pointer`}
       style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
+      onClick={() => data.onNodeClick?.(id)}
     >
       {/* Left color bar */}
       <div
