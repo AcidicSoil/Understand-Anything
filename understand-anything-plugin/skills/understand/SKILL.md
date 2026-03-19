@@ -51,7 +51,7 @@ Determine whether to run a full analysis or incremental update.
    - Read the primary package manifest (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `pom.xml`) if it exists. Store as `$MANIFEST_CONTENT`.
    - Capture the top-level directory tree:
      ```bash
-     find $PROJECT_ROOT -maxdepth 2 -type f | head -100
+     find $PROJECT_ROOT -maxdepth 2 -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' | head -100
      ```
      Store as `$DIR_TREE`.
    - Detect the project entry point by checking for common patterns: `src/index.ts`, `src/main.ts`, `src/App.tsx`, `main.py`, `main.go`, `src/main.rs`, `index.js`. Store first match as `$ENTRY_POINT`.
@@ -82,7 +82,7 @@ Pass these parameters in the dispatch prompt:
 > Project root: `$PROJECT_ROOT`
 > Write output to: `$PROJECT_ROOT/.understand-anything/intermediate/scan-result.json`
 
-After the agent completes, read `$PROJECT_ROOT/.understand-anything/intermediate/scan-result.json` to get:
+After the subagent completes, read `$PROJECT_ROOT/.understand-anything/intermediate/scan-result.json` to get:
 - Project name, description
 - Languages, frameworks
 - File list with line counts
@@ -137,7 +137,7 @@ After ALL batches complete, read each `batch-<N>.json` file and merge:
 
 ### Incremental update path
 
-Use the changed files list from Phase 0. Batch and dispatch file-analyzer agents using the same process as above, but only for changed files.
+Use the changed files list from Phase 0. Batch and dispatch file-analyzer subagents using the same process as above, but only for changed files.
 
 After batches complete, merge with the existing graph:
 1. Remove old nodes whose `filePath` matches any changed file
@@ -194,7 +194,7 @@ Pass these parameters in the dispatch prompt:
 > [list of edges with type "imports"]
 > ```
 
-After the agent completes, read `$PROJECT_ROOT/.understand-anything/intermediate/layers.json` to get the layer assignments.
+After the subagent completes, read `$PROJECT_ROOT/.understand-anything/intermediate/layers.json` to get the layer assignments.
 
 **For incremental updates:** Always re-run architecture analysis on the full merged node set, since layer assignments may shift when files change.
 
@@ -247,7 +247,7 @@ Pass these parameters in the dispatch prompt:
 > [imports and calls edges]
 > ```
 
-After the agent completes, read `$PROJECT_ROOT/.understand-anything/intermediate/tour.json` to get the tour steps.
+After the subagent completes, read `$PROJECT_ROOT/.understand-anything/intermediate/tour.json` to get the tour steps.
 
 ---
 
@@ -296,7 +296,7 @@ Pass these parameters in the dispatch prompt:
    > Read the file and validate it for completeness and correctness.
    > Write output to: `$PROJECT_ROOT/.understand-anything/intermediate/review.json`
 
-3. After the agent completes, read `$PROJECT_ROOT/.understand-anything/intermediate/review.json`.
+3. After the subagent completes, read `$PROJECT_ROOT/.understand-anything/intermediate/review.json`.
 
 4. **If `approved: false`:**
    - Review the `issues` list
