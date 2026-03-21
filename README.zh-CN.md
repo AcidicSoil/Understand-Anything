@@ -139,6 +139,13 @@ Fetch and follow instructions from https://raw.githubusercontent.com/Lum1104/Und
 
 克隆此仓库后，Cursor 会自动通过 `.cursor-plugin/plugin.json`文件发现插件。无需手动安装 — 只需克隆并在 Cursor 中打开即可。
 
+### Antigravity
+
+告诉 Antigravity:
+```text
+Fetch and follow instructions from https://raw.githubusercontent.com/Lum1104/Understand-Anything/refs/heads/main/.antigravity/INSTALL.md
+```
+
 ### 多平台兼容
 
 | 平台 | 状态 | 安装方式 |
@@ -148,6 +155,7 @@ Fetch and follow instructions from https://raw.githubusercontent.com/Lum1104/Und
 | OpenCode | ✅ 支持 | 插件配置 |
 | OpenClaw | ✅ 支持 | AI驱动安装 |
 | Cursor | ✅ 支持 | 自动发现 |
+| Antigravity | ✅ 支持 | AI驱动安装 |
 
 ---
 

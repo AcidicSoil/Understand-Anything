@@ -140,6 +140,13 @@ Fetch and follow instructions from https://raw.githubusercontent.com/Lum1104/Und
 
 Cursor auto-discovers the plugin via `.cursor-plugin/plugin.json` when this repo is cloned. No manual installation needed — just clone and open in Cursor.
 
+### Antigravity
+
+Tell Antigravity:
+```text
+Fetch and follow instructions from https://raw.githubusercontent.com/Lum1104/Understand-Anything/refs/heads/main/.antigravity/INSTALL.md
+```
+
 ### Platform Compatibility
 
 | Platform | Status | Install Method |
@@ -149,6 +156,7 @@ Cursor auto-discovers the plugin via `.cursor-plugin/plugin.json` when this repo
 | OpenCode | ✅ Supported | Plugin config |
 | OpenClaw | ✅ Supported | AI-driven install |
 | Cursor | ✅ Supported | Auto-discovery |
+| Antigravity | ✅ Supported | AI-driven install |
 
 ---
 
