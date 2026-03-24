@@ -37,6 +37,20 @@ export {
 } from "./analyzer/language-lesson.js";
 export { PluginRegistry } from "./plugins/registry.js";
 export {
+  LanguageRegistry,
+  FrameworkRegistry,
+  builtinLanguageConfigs,
+  builtinFrameworkConfigs,
+  LanguageConfigSchema,
+  FrameworkConfigSchema,
+} from "./languages/index.js";
+export type {
+  LanguageConfig,
+  FrameworkConfig,
+  TreeSitterConfig,
+  FilePatternConfig,
+} from "./languages/index.js";
+export {
   parsePluginConfig,
   serializePluginConfig,
   DEFAULT_PLUGIN_CONFIG,

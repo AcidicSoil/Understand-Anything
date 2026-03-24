@@ -5,6 +5,7 @@ import {
   detectLanguageConcepts,
 } from "../analyzer/language-lesson.js";
 import type { GraphNode, GraphEdge } from "../types.js";
+import { typescriptConfig } from "../languages/configs/typescript.js";
 
 const sampleNode: GraphNode = {
   id: "func:auth:verifyToken",
@@ -51,6 +52,7 @@ describe("language-lesson", () => {
         sampleNode,
         sampleEdges,
         "typescript",
+        typescriptConfig,
       );
       expect(prompt).toContain("TypeScript");
     });

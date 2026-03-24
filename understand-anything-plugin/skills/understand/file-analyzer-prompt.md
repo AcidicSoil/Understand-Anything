@@ -12,7 +12,7 @@ For each file in the batch provided to you, extract structural data via a script
 
 ## Phase 1 -- Structural Extraction Script
 
-Write a script that reads each source file in your batch and extracts deterministic structural information. Choose the best language for this task -- Node.js is recommended for TypeScript/JavaScript projects, Python for Python projects, bash with grep for simpler cases.
+Write a script that reads each source file in your batch and extracts deterministic structural information. Choose the best language for this task based on what's available on the system and what the project uses -- Node.js, Python, or bash with grep are all valid choices.
 
 ### Script Requirements
 
@@ -111,7 +111,7 @@ The script must write this exact JSON structure to the output file:
 Before writing the script, create its input JSON file. **IMPORTANT:** Use the batch index in ALL temp file paths to avoid collisions when multiple file-analyzer agents run concurrently.
 
 ```bash
-cat > /tmp/ua-file-analyzer-input-<batchIndex>.json << 'ENDJSON'
+cat > $PROJECT_ROOT/.understand-anything/tmp/ua-file-analyzer-input-<batchIndex>.json << 'ENDJSON'
 {
   "projectRoot": "<project-root>",
   "allProjectFiles": [<full file list from scan>],
@@ -125,7 +125,10 @@ ENDJSON
 After writing the script, execute it. **Use the batch index in every temp file path** — multiple file-analyzer agents run in parallel and must not overwrite each other's files:
 
 ```bash
-node /tmp/ua-file-extract-<batchIndex>.js /tmp/ua-file-analyzer-input-<batchIndex>.json /tmp/ua-file-extract-results-<batchIndex>.json
+# For Node.js scripts:
+node $PROJECT_ROOT/.understand-anything/tmp/ua-file-extract-<batchIndex>.js $PROJECT_ROOT/.understand-anything/tmp/ua-file-analyzer-input-<batchIndex>.json $PROJECT_ROOT/.understand-anything/tmp/ua-file-extract-results-<batchIndex>.json
+# For Python scripts:
+python3 $PROJECT_ROOT/.understand-anything/tmp/ua-file-extract-<batchIndex>.py $PROJECT_ROOT/.understand-anything/tmp/ua-file-analyzer-input-<batchIndex>.json $PROJECT_ROOT/.understand-anything/tmp/ua-file-extract-results-<batchIndex>.json
 ```
 
 If the script exits with a non-zero code, read stderr, diagnose the issue, fix the script, and re-run. You have up to 2 retry attempts.
@@ -134,7 +137,7 @@ If the script exits with a non-zero code, read stderr, diagnose the issue, fix t
 
 ## Phase 2 -- Semantic Analysis
 
-After the script completes, read `/tmp/ua-file-extract-results-<batchIndex>.json`. Use these structured results as the foundation for your analysis. Do NOT re-read the source files unless the script skipped a file or you need to understand a specific code pattern that the script could not capture.
+After the script completes, read `$PROJECT_ROOT/.understand-anything/tmp/ua-file-extract-results-<batchIndex>.json`. Use these structured results as the foundation for your analysis. Do NOT re-read the source files unless the script skipped a file or you need to understand a specific code pattern that the script could not capture.
 
 For each file in the script's `results` array, produce `GraphNode` and `GraphEdge` objects by combining the script's structural data with your expert judgment.
 
@@ -166,7 +169,15 @@ Indicators from script data:
 - Filename contains `.test.` or `.spec.` = `test`
 - Exports a class with `Handler` or `Controller` in the name = `api-handler`
 - Only type/interface exports = `type-definition`
-- Named `index.ts` at a directory root with re-exports = `entry-point`
+- Named `index.ts` or `index.js` at a directory root with re-exports = `entry-point` (JavaScript/TypeScript barrel)
+- Named `__init__.py` at a package root with imports or re-exports = `entry-point` (Python package barrel)
+- Named `manage.py` = `entry-point` (Django management script)
+- Named `main.go` in `cmd/` directory = `entry-point` (Go binary)
+- Named `main.rs` or `lib.rs` in `src/` = `entry-point` (Rust crate root)
+- Named `Application.java` or `Main.java` = `entry-point` (Java application)
+- Named `Program.cs` = `entry-point` (.NET application)
+- Named `config.ru` = `entry-point` (Ruby Rack server)
+- Named `mod.rs` in a directory = `barrel` (Rust module barrel)
 
 **Language Notes** (optional, your expert judgment):
 If the structural data reveals notable language-specific patterns (e.g., many generic type parameters, decorator usage, complex trait bounds), add a brief `languageNotes` string. Only add this when genuinely educational.

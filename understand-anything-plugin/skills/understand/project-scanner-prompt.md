@@ -81,9 +81,13 @@ Read config files (if they exist) and extract framework information:
 - `tsconfig.json` -- if present, confirms TypeScript usage
 - `Cargo.toml` -- if present, confirms Rust project; extract `[package].name`
 - `go.mod` -- if present, confirms Go project; extract module name
-- `requirements.txt` / `pyproject.toml` / `setup.py` / `Pipfile` -- if present, confirms Python project
-- `Gemfile` -- if present, confirms Ruby project
-- `pom.xml` / `build.gradle` -- if present, confirms Java project
+- `requirements.txt` -- if present, confirms Python project; read line by line and match package names (strip version specifiers) against known Python frameworks: `django`, `djangorestframework`, `fastapi`, `flask`, `sqlalchemy`, `alembic`, `celery`, `pydantic`, `uvicorn`, `gunicorn`, `aiohttp`, `tornado`, `starlette`, `pytest`, `hypothesis`, `channels`
+- `pyproject.toml` -- if present, confirms Python project; parse the `[project].dependencies` or `[tool.poetry.dependencies]` section and apply the same Python framework keyword matching as above. Also check for `[tool.pytest.ini_options]` (confirms pytest) and `[tool.django]` (confirms Django).
+- `setup.py` / `setup.cfg` / `Pipfile` -- if present, confirms Python project; read and apply Python framework keyword matching
+- `Gemfile` -- if present, confirms Ruby project; read and match gem names against known Ruby frameworks: `rails`, `railties`, `sinatra`, `grape`, `rspec`, `sidekiq`, `activerecord`, `actionpack`, `devise`, `pundit`
+- `go.mod` dependencies -- if present, read the `require` block and match module paths against known Go frameworks: `github.com/gin-gonic/gin`, `github.com/labstack/echo`, `github.com/gofiber/fiber`, `github.com/go-chi/chi`, `gorm.io/gorm`
+- `Cargo.toml` dependencies -- if present, read `[dependencies]` and match crate names against known Rust frameworks: `actix-web`, `axum`, `rocket`, `diesel`, `tokio`, `serde`, `warp`
+- `pom.xml` / `build.gradle` / `build.gradle.kts` -- if present, confirms Java/Kotlin project; match dependency names against known JVM frameworks: `spring-boot`, `spring-web`, `spring-data`, `quarkus`, `micronaut`, `hibernate`, `jakarta`, `junit`, `ktor`
 
 **Step 6 -- Complexity Estimation**
 
@@ -99,7 +103,8 @@ Extract from (in priority order):
 1. `package.json` `name` field
 2. `Cargo.toml` `[package].name`
 3. `go.mod` module path (last segment)
-4. Directory name of project root
+4. `pyproject.toml` -- check `[project].name` first, then `[tool.poetry].name`
+5. Directory name of project root
 
 ### Script Output Format
 
@@ -136,7 +141,7 @@ The script must write this exact JSON structure to the output file:
 After writing the script, execute it:
 
 ```bash
-node /tmp/ua-project-scan.js "<project-root>" "/tmp/ua-scan-results.json"
+node $PROJECT_ROOT/.understand-anything/tmp/ua-project-scan.js "<project-root>" "$PROJECT_ROOT/.understand-anything/tmp/ua-scan-results.json"
 ```
 
 (Or the equivalent for bash/Python, depending on which language you chose.)
@@ -147,7 +152,7 @@ If the script exits with a non-zero code, read stderr, diagnose the issue, fix t
 
 ## Phase 2 -- Description and Final Assembly
 
-After the script completes, read `/tmp/ua-scan-results.json`. Do NOT re-run file discovery commands or re-count lines -- trust the script's results entirely.
+After the script completes, read `$PROJECT_ROOT/.understand-anything/tmp/ua-scan-results.json`. Do NOT re-run file discovery commands or re-count lines -- trust the script's results entirely.
 
 **IMPORTANT:** The final output must NOT contain the `scriptCompleted`, `rawDescription`, or `readmeHead` fields. These are intermediate script fields only. Strip them when assembling the final JSON.
 

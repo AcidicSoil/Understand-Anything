@@ -46,7 +46,7 @@ For every node, count how many other nodes it has edges pointing TO (fan-out). H
 **C. Entry Point Candidates**
 
 Identify likely entry points using these signals (score each file node, sum the scores):
-- Filename matches `index.ts`, `index.js`, `main.ts`, `main.js`, `app.ts`, `app.js`, `server.ts`, `server.js`, `mod.rs`, `main.go`, `main.py`, `main.rs` -> +3 points
+- Filename matches `index.ts`, `index.js`, `main.ts`, `main.js`, `app.ts`, `app.js`, `server.ts`, `server.js`, `mod.rs`, `main.go`, `main.py`, `main.rs`, `manage.py`, `app.py`, `wsgi.py`, `asgi.py`, `run.py`, `__main__.py`, `Application.java`, `Main.java`, `Program.cs`, `config.ru`, `index.php`, `App.swift`, `Application.kt`, `main.cpp`, `main.c` -> +3 points
 - Node tags contain `entry-point` or `barrel` -> +2 points
 - File is at the project root or one level deep (e.g., `src/index.ts`) -> +1 point
 - High fan-out (top 10%) -> +1 point
@@ -132,7 +132,7 @@ Create a lookup of each node ID to its `summary`, `type`, `tags` (default to emp
 Before writing the script, create its input JSON file:
 
 ```bash
-cat > /tmp/ua-tour-input.json << 'ENDJSON'
+cat > $PROJECT_ROOT/.understand-anything/tmp/ua-tour-input.json << 'ENDJSON'
 {
   "nodes": [<nodes from prompt>],
   "edges": [<edges from prompt>],
@@ -146,7 +146,7 @@ ENDJSON
 After writing the script, execute it:
 
 ```bash
-node /tmp/ua-tour-analyze.js /tmp/ua-tour-input.json /tmp/ua-tour-results.json
+node $PROJECT_ROOT/.understand-anything/tmp/ua-tour-analyze.js $PROJECT_ROOT/.understand-anything/tmp/ua-tour-input.json $PROJECT_ROOT/.understand-anything/tmp/ua-tour-results.json
 ```
 
 If the script exits with a non-zero code, read stderr, diagnose the issue, fix the script, and re-run. You have up to 2 retry attempts.
@@ -155,7 +155,7 @@ If the script exits with a non-zero code, read stderr, diagnose the issue, fix t
 
 ## Phase 2 -- Pedagogical Tour Design
 
-After the script completes, read `/tmp/ua-tour-results.json`. Use the structural analysis as your primary guide for designing the tour. Do NOT re-read source files or re-analyze the graph -- trust the script's results entirely.
+After the script completes, read `$PROJECT_ROOT/.understand-anything/tmp/ua-tour-results.json`. Use the structural analysis as your primary guide for designing the tour. Do NOT re-read source files or re-analyze the graph -- trust the script's results entirely.
 
 ### Step 1 -- Choose the Starting Point
 
