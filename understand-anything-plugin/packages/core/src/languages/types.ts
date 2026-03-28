@@ -26,7 +26,8 @@ export type FilePatternConfig = z.infer<typeof FilePatternConfigSchema>;
 export const LanguageConfigSchema = z.object({
   id: z.string().min(1),
   displayName: z.string().min(1),
-  extensions: z.array(z.string()).min(1),
+  extensions: z.array(z.string()),
+  filenames: z.array(z.string()).optional(),
   treeSitter: TreeSitterConfigSchema.optional(),
   concepts: z.array(z.string()),
   filePatterns: FilePatternConfigSchema,
