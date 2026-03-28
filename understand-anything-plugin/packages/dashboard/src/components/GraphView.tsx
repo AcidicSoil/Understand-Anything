@@ -21,6 +21,7 @@ import PortalNode from "./PortalNode";
 import type { PortalFlowNode } from "./PortalNode";
 import Breadcrumb from "./Breadcrumb";
 import { useDashboardStore } from "../store";
+import type { KnowledgeGraph } from "@understand-anything/core/types";
 import { useTheme } from "../themes/index.ts";
 import {
   applyDagreLayout,
@@ -105,7 +106,6 @@ function useOverviewGraph() {
   const graph = useDashboardStore((s) => s.graph);
   const searchResults = useDashboardStore((s) => s.searchResults);
   const drillIntoLayer = useDashboardStore((s) => s.drillIntoLayer);
-  const tourHighlightedNodeIds = useDashboardStore((s) => s.tourHighlightedNodeIds);
 
   return useMemo(() => {
     if (!graph) return { nodes: [] as Node[], edges: [] as Edge[] };
@@ -181,18 +181,20 @@ function useOverviewGraph() {
     }
     const laid = applyDagreLayout(clusterNodes as unknown as Node[], flowEdges, "TB", dims);
     return { nodes: laid.nodes, edges: laid.edges };
-  }, [graph, searchResults, drillIntoLayer, tourHighlightedNodeIds]);
+  }, [graph, searchResults, drillIntoLayer]);
 }
 
-// ── Layer detail level: files + portal nodes ───────────────────────────
+// ── Layer detail level: topology (dagre) + visual overlay ───────────────
 
-function useLayerDetailGraph() {
+/**
+ * Topology memo: computes node positions via dagre. Only recomputes when
+ * the graph structure, active layer, persona, diff, or focus changes.
+ * Does NOT depend on selectedNodeId, searchResults, or tourHighlightedNodeIds.
+ */
+function useLayerDetailTopology() {
   const graph = useDashboardStore((s) => s.graph);
   const activeLayerId = useDashboardStore((s) => s.activeLayerId);
-  const selectedNodeId = useDashboardStore((s) => s.selectedNodeId);
-  const searchResults = useDashboardStore((s) => s.searchResults);
   const selectNode = useDashboardStore((s) => s.selectNode);
-  const tourHighlightedNodeIds = useDashboardStore((s) => s.tourHighlightedNodeIds);
   const persona = useDashboardStore((s) => s.persona);
   const diffMode = useDashboardStore((s) => s.diffMode);
   const changedNodeIds = useDashboardStore((s) => s.changedNodeIds);
@@ -209,22 +211,19 @@ function useLayerDetailGraph() {
 
   return useMemo(() => {
     if (!graph || !activeLayerId)
-      return { nodes: [] as Node[], edges: [] as Edge[] };
+      return { nodes: [] as CustomFlowNode[], edges: [] as Edge[], portalNodes: [] as PortalFlowNode[], portalEdges: [] as Edge[], filteredEdges: [] as KnowledgeGraph["edges"] };
 
     const activeLayer = graph.layers.find((l) => l.id === activeLayerId);
-    if (!activeLayer) return { nodes: [] as Node[], edges: [] as Edge[] };
+    if (!activeLayer) return { nodes: [] as CustomFlowNode[], edges: [] as Edge[], portalNodes: [] as PortalFlowNode[], portalEdges: [] as Edge[], filteredEdges: [] as KnowledgeGraph["edges"] };
 
     const layerNodeIds = new Set(activeLayer.nodeIds);
 
-    let filteredGraphNodes = graph.nodes.filter(
-      (n) => layerNodeIds.has(n.id) && n.type === "file",
-    );
-
-    if (persona === "non-technical") {
-      filteredGraphNodes = filteredGraphNodes.filter(
-        (n) => n.type === "concept" || n.type === "module" || n.type === "file",
-      );
-    }
+    // Non-technical persona only sees concept/module/file nodes
+    let filteredGraphNodes = persona === "non-technical"
+      ? graph.nodes.filter(
+          (n) => layerNodeIds.has(n.id) && (n.type === "concept" || n.type === "module" || n.type === "file"),
+        )
+      : graph.nodes.filter((n) => layerNodeIds.has(n.id) && n.type === "file");
 
     let filteredNodeIds = new Set(filteredGraphNodes.map((n) => n.id));
 
@@ -248,60 +247,36 @@ function useLayerDetailGraph() {
       );
     }
 
-    // Neighbor set for selection highlighting
-    const neighborNodeIds = new Set<string>();
-    if (selectedNodeId) {
-      for (const edge of filteredGraphEdges) {
-        if (edge.source === selectedNodeId) neighborNodeIds.add(edge.target);
-        if (edge.target === selectedNodeId) neighborNodeIds.add(edge.source);
-      }
-      neighborNodeIds.add(selectedNodeId);
-    }
-
-    const flowNodes: CustomFlowNode[] = filteredGraphNodes.map((node) => {
-      const matchResult = searchResults.find((r) => r.nodeId === node.id);
-      const hasSelection = !!selectedNodeId;
-      return {
-        id: node.id,
-        type: "custom" as const,
-        position: { x: 0, y: 0 },
-        data: {
-          label: node.name ?? node.filePath?.split("/").pop() ?? node.id,
-          nodeType: node.type,
-          summary: node.summary,
-          complexity: node.complexity,
-          isHighlighted: !!matchResult,
-          searchScore: matchResult?.score,
-          isSelected: selectedNodeId === node.id,
-          isTourHighlighted: tourHighlightedNodeIds.includes(node.id),
-          isDiffChanged: diffMode && changedNodeIds.has(node.id),
-          isDiffAffected: diffMode && affectedNodeIds.has(node.id),
-          isDiffFaded:
-            diffMode &&
-            !changedNodeIds.has(node.id) &&
-            !affectedNodeIds.has(node.id),
-          isNeighbor:
-            hasSelection &&
-            neighborNodeIds.has(node.id) &&
-            selectedNodeId !== node.id,
-          isSelectionFaded: hasSelection && !neighborNodeIds.has(node.id),
-          onNodeClick: handleNodeSelect,
-        },
-      };
-    });
-
     const diffNodeIds = diffMode
       ? new Set([...changedNodeIds, ...affectedNodeIds])
       : new Set<string>();
+
+    const flowNodes: CustomFlowNode[] = filteredGraphNodes.map((node) => ({
+      id: node.id,
+      type: "custom" as const,
+      position: { x: 0, y: 0 },
+      data: {
+        label: node.name ?? node.filePath?.split("/").pop() ?? node.id,
+        nodeType: node.type,
+        summary: node.summary,
+        complexity: node.complexity,
+        isHighlighted: false,
+        searchScore: undefined,
+        isSelected: false,
+        isTourHighlighted: false,
+        isDiffChanged: diffMode && changedNodeIds.has(node.id),
+        isDiffAffected: diffMode && affectedNodeIds.has(node.id),
+        isDiffFaded: diffMode && !changedNodeIds.has(node.id) && !affectedNodeIds.has(node.id),
+        isNeighbor: false,
+        isSelectionFaded: false,
+        onNodeClick: handleNodeSelect,
+      },
+    }));
+
     const flowEdges: Edge[] = filteredGraphEdges.map((edge, i) => {
       const sourceInDiff = diffMode && diffNodeIds.has(edge.source);
       const targetInDiff = diffMode && diffNodeIds.has(edge.target);
       const isImpacted = diffMode && (sourceInDiff || targetInDiff);
-
-      const isSelectedEdge =
-        !!selectedNodeId &&
-        (edge.source === selectedNodeId || edge.target === selectedNodeId);
-      const hasSelection = !!selectedNodeId;
 
       let edgeStyle: React.CSSProperties;
       let edgeLabelStyle: React.CSSProperties;
@@ -309,10 +284,7 @@ function useLayerDetailGraph() {
 
       if (isImpacted) {
         edgeStyle = {
-          stroke:
-            sourceInDiff && targetInDiff
-              ? "rgba(224, 82, 82, 0.7)"
-              : "rgba(212, 160, 48, 0.5)",
+          stroke: sourceInDiff && targetInDiff ? "rgba(224, 82, 82, 0.7)" : "rgba(212, 160, 48, 0.5)",
           strokeWidth: 2.5,
         };
         edgeLabelStyle = { fill: "#a39787", fontSize: 10 };
@@ -320,14 +292,6 @@ function useLayerDetailGraph() {
       } else if (diffMode) {
         edgeStyle = { stroke: "rgba(212,165,116,0.08)", strokeWidth: 1 };
         edgeLabelStyle = { fill: "rgba(163,151,135,0.3)", fontSize: 10 };
-        edgeAnimated = false;
-      } else if (isSelectedEdge) {
-        edgeStyle = { stroke: "rgba(212,165,116,0.8)", strokeWidth: 2.5 };
-        edgeLabelStyle = { fill: "#d4a574", fontSize: 11, fontWeight: 600 };
-        edgeAnimated = true;
-      } else if (hasSelection) {
-        edgeStyle = { stroke: "rgba(212,165,116,0.08)", strokeWidth: 1 };
-        edgeLabelStyle = { fill: "rgba(163,151,135,0.2)", fontSize: 10 };
         edgeAnimated = false;
       } else {
         edgeStyle = { stroke: "rgba(212,165,116,0.3)", strokeWidth: 1.5 };
@@ -366,11 +330,7 @@ function useLayerDetailGraph() {
     const portalEdges: Edge[] = [];
     let portalEdgeIdx = flowEdges.length;
     for (const portal of portals) {
-      const crossFiles = findCrossLayerFileNodes(
-        graph,
-        activeLayerId,
-        portal.layerId,
-      );
+      const crossFiles = findCrossLayerFileNodes(graph, activeLayerId, portal.layerId);
       for (const fileId of crossFiles) {
         if (filteredNodeIds.has(fileId)) {
           portalEdges.push({
@@ -399,21 +359,83 @@ function useLayerDetailGraph() {
     }
 
     const laid = applyDagreLayout(allFlowNodes, allFlowEdges, "TB", dims);
-    return { nodes: laid.nodes, edges: laid.edges };
-  }, [
-    graph,
-    activeLayerId,
-    selectedNodeId,
-    searchResults,
-    tourHighlightedNodeIds,
-    persona,
-    handleNodeSelect,
-    diffMode,
-    changedNodeIds,
-    affectedNodeIds,
-    focusNodeId,
-    drillIntoLayer,
-  ]);
+    return { nodes: laid.nodes, edges: laid.edges, portalNodes, portalEdges, filteredEdges: filteredGraphEdges };
+  }, [graph, activeLayerId, persona, handleNodeSelect, diffMode, changedNodeIds, affectedNodeIds, focusNodeId, drillIntoLayer]);
+}
+
+/**
+ * Visual overlay: cheap O(n) pass that applies selection, search, and tour
+ * state onto already-positioned nodes. Avoids triggering dagre relayout.
+ */
+function useLayerDetailGraph() {
+  const selectedNodeId = useDashboardStore((s) => s.selectedNodeId);
+  const searchResults = useDashboardStore((s) => s.searchResults);
+  const tourHighlightedNodeIds = useDashboardStore((s) => s.tourHighlightedNodeIds);
+
+  const topo = useLayerDetailTopology();
+
+  const nodes = useMemo(() => {
+    const searchMap = new Map(searchResults.map((r) => [r.nodeId, r.score]));
+    const tourSet = new Set(tourHighlightedNodeIds);
+
+    // Build neighbor set for selection highlighting
+    const neighborNodeIds = new Set<string>();
+    if (selectedNodeId) {
+      for (const edge of topo.filteredEdges) {
+        if (edge.source === selectedNodeId) neighborNodeIds.add(edge.target);
+        if (edge.target === selectedNodeId) neighborNodeIds.add(edge.source);
+      }
+      neighborNodeIds.add(selectedNodeId);
+    }
+
+    return topo.nodes.map((node) => {
+      // Skip portal nodes — they have no CustomNodeData
+      if (node.type === "portal") return node;
+
+      const searchScore = searchMap.get(node.id);
+      const isHighlighted = searchScore !== undefined;
+      const isSelected = selectedNodeId === node.id;
+      const isTourHighlighted = tourSet.has(node.id);
+      const hasSelection = !!selectedNodeId;
+      const isNeighbor = hasSelection && neighborNodeIds.has(node.id) && !isSelected;
+      const isSelectionFaded = hasSelection && !neighborNodeIds.has(node.id);
+
+      const data = node.data as CustomFlowNode["data"];
+
+      // Skip creating a new object if nothing visual changed
+      if (
+        data.isHighlighted === isHighlighted &&
+        data.searchScore === searchScore &&
+        data.isSelected === isSelected &&
+        data.isTourHighlighted === isTourHighlighted &&
+        data.isNeighbor === isNeighbor &&
+        data.isSelectionFaded === isSelectionFaded
+      ) {
+        return node;
+      }
+
+      return { ...node, data: { ...data, isHighlighted, searchScore, isSelected, isTourHighlighted, isNeighbor, isSelectionFaded } };
+    });
+  }, [topo.nodes, topo.filteredEdges, selectedNodeId, searchResults, tourHighlightedNodeIds]);
+
+  const edges = useMemo(() => {
+    if (!selectedNodeId) return topo.edges;
+
+    // Apply selection-based edge styling on top of topology edges
+    return topo.edges.map((edge) => {
+      const isSelectedEdge = edge.source === selectedNodeId || edge.target === selectedNodeId;
+      // Don't restyle diff-impacted or portal edges
+      if ((edge.style as Record<string, unknown>)?.strokeDasharray) return edge;
+
+      if (isSelectedEdge) {
+        return { ...edge, animated: true, style: { stroke: "rgba(212,165,116,0.8)", strokeWidth: 2.5 }, labelStyle: { fill: "#d4a574", fontSize: 11, fontWeight: 600 } };
+      }
+      // Fade unrelated edges
+      return { ...edge, animated: false, style: { stroke: "rgba(212,165,116,0.08)", strokeWidth: 1 }, labelStyle: { fill: "rgba(163,151,135,0.2)", fontSize: 10 } };
+    });
+  }, [topo.edges, selectedNodeId]);
+
+  return { nodes, edges };
 }
 
 // ── Main inner component (must be inside ReactFlowProvider) ────────────
@@ -423,6 +445,7 @@ function GraphViewInner() {
   const navigationLevel = useDashboardStore((s) => s.navigationLevel);
   const activeLayerId = useDashboardStore((s) => s.activeLayerId);
   const selectNode = useDashboardStore((s) => s.selectNode);
+  const openCodeViewer = useDashboardStore((s) => s.openCodeViewer);
   const drillIntoLayer = useDashboardStore((s) => s.drillIntoLayer);
   const focusNodeId = useDashboardStore((s) => s.focusNodeId);
   const setFocusNode = useDashboardStore((s) => s.setFocusNode);
@@ -464,9 +487,10 @@ function GraphViewInner() {
         drillIntoLayer(targetLayerId);
       } else {
         selectNode(node.id);
+        openCodeViewer(node.id);
       }
     },
-    [navigationLevel, drillIntoLayer, selectNode],
+    [navigationLevel, drillIntoLayer, selectNode, openCodeViewer],
   );
 
   const onPaneClick = useCallback(() => {

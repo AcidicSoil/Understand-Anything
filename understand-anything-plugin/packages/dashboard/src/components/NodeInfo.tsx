@@ -71,6 +71,7 @@ export default function NodeInfo() {
   const [languageExpanded, setLanguageExpanded] = useState(true);
 
   const navigateToNode = useDashboardStore((s) => s.navigateToNode);
+  const navigateToHistoryIndex = useDashboardStore((s) => s.navigateToHistoryIndex);
   const setFocusNode = useDashboardStore((s) => s.setFocusNode);
   const focusNodeId = useDashboardStore((s) => s.focusNodeId);
   const node = graph?.nodes.find((n) => n.id === selectedNodeId) ?? null;
@@ -128,25 +129,8 @@ export default function NodeInfo() {
             <span key={`${h.id}-${i}`} className="flex items-center gap-1">
               <button
                 onClick={() => {
-                  // Navigate back to this point in history
                   const fullIdx = historyNodes.length - arr.length + i;
-                  // Pop history back to this point and navigate
-                  const targetId = historyNodes[fullIdx].id;
-                  // Use navigateToNode which will push current to history,
-                  // but we want to rewind. Use goBackNode repeatedly would be clunky,
-                  // so we directly set state.
-                  const newHistory = nodeHistory.slice(0, fullIdx);
-                  const layerId = graph
-                    ? graph.layers.find((l) => l.nodeIds.includes(targetId))?.id
-                    : null;
-                  useDashboardStore.setState({
-                    selectedNodeId: targetId,
-                    zoomToNodeId: targetId,
-                    nodeHistory: newHistory,
-                    ...(layerId
-                      ? { navigationLevel: "layer-detail" as const, activeLayerId: layerId }
-                      : {}),
-                  });
+                  navigateToHistoryIndex(fullIdx);
                 }}
                 className="text-[10px] text-text-muted hover:text-gold transition-colors truncate max-w-[80px]"
                 title={h.name}

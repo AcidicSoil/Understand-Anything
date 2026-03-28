@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import type { NodeProps, Node } from "@xyflow/react";
 import { getLayerColor } from "./LayerLegend";
@@ -21,7 +22,7 @@ export interface LayerClusterData extends Record<string, unknown> {
 
 export type LayerClusterFlowNode = Node<LayerClusterData, "layer-cluster">;
 
-export default function LayerClusterNode({
+function LayerClusterNode({
   data,
 }: NodeProps<LayerClusterFlowNode>) {
   const color = getLayerColor(data.layerColorIndex);
@@ -99,3 +100,5 @@ export default function LayerClusterNode({
     </div>
   );
 }
+
+export default memo(LayerClusterNode);

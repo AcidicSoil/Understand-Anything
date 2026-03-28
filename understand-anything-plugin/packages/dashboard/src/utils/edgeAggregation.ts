@@ -72,12 +72,14 @@ export function aggregateLayerEdges(
 /**
  * Compute portal info for a given layer: which other layers are connected
  * and how many edges cross the boundary.
+ * Accepts optional pre-computed aggregation to avoid redundant work.
  */
 export function computePortals(
   graph: KnowledgeGraph,
   activeLayerId: string,
+  precomputed?: LayerEdgeAggregation[],
 ): PortalInfo[] {
-  const aggregated = aggregateLayerEdges(graph);
+  const aggregated = precomputed ?? aggregateLayerEdges(graph);
   const layerNameMap = new Map(graph.layers.map((l) => [l.id, l.name]));
 
   const portalMap = new Map<string, number>();

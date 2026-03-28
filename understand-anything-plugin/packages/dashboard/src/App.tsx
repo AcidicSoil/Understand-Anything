@@ -63,7 +63,7 @@ function App() {
       // Navigation
       {
         key: "Escape",
-        description: "Close panels and modals",
+        description: "Close panels / go back to overview",
         action: () => {
           // Read from store at invocation time to avoid stale closures
           const state = useDashboardStore.getState();
@@ -71,6 +71,8 @@ function App() {
             state.closeCodeViewer();
           } else if (state.selectedNodeId) {
             state.selectNode(null);
+          } else if (state.navigationLevel === "layer-detail") {
+            state.navigateToOverview();
           } else if (state.tourActive) {
             state.stopTour();
           } else {
@@ -114,15 +116,6 @@ function App() {
         category: "Tour",
       },
       // View toggles
-      {
-        key: "l",
-        description: "Toggle layer visualization",
-        action: () => {
-          const state = useDashboardStore.getState();
-          state.toggleLayers();
-        },
-        category: "View",
-      },
       {
         key: "d",
         description: "Toggle diff mode",
@@ -195,13 +188,13 @@ function App() {
   }, [setDiffOverlay]);
 
   // Determine sidebar content
-  // Learn mode shows LearnPanel + NodeInfo when a node is selected
-  // Other modes show NodeInfo when selected, ProjectOverview otherwise
+  // NodeInfo always takes priority when a node is selected.
+  // Learn mode adds LearnPanel below it; otherwise ProjectOverview shows when idle.
   const isLearnMode = tourActive || persona === "junior";
   const sidebarContent = (
     <>
-      {isLearnMode && <LearnPanel />}
       {selectedNodeId && <NodeInfo />}
+      {isLearnMode && <LearnPanel />}
       {!selectedNodeId && !isLearnMode && <ProjectOverview />}
     </>
   );

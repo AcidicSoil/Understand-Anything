@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import type { NodeProps, Node } from "@xyflow/react";
 import { getLayerColor } from "./LayerLegend";
@@ -12,7 +13,7 @@ export interface PortalNodeData extends Record<string, unknown> {
 
 export type PortalFlowNode = Node<PortalNodeData, "portal">;
 
-export default function PortalNode({
+function PortalNode({
   data,
 }: NodeProps<PortalFlowNode>) {
   const color = getLayerColor(data.layerColorIndex);
@@ -59,3 +60,5 @@ export default function PortalNode({
     </div>
   );
 }
+
+export default memo(PortalNode);

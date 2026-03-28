@@ -18,6 +18,9 @@ function findNodeLayer(graph: KnowledgeGraph, nodeId: string): string | null {
   return null;
 }
 
+/** Maximum number of entries in the sidebar navigation history. */
+const MAX_HISTORY = 50;
+
 interface DashboardStore {
   graph: KnowledgeGraph | null;
   selectedNodeId: string | null;
@@ -26,8 +29,6 @@ interface DashboardStore {
   searchEngine: SearchEngine | null;
   searchMode: "fuzzy" | "semantic";
   setSearchMode: (mode: "fuzzy" | "semantic") => void;
-
-  showLayers: boolean;
 
   // Lens navigation
   navigationLevel: NavigationLevel;
@@ -46,9 +47,6 @@ interface DashboardStore {
   changedNodeIds: Set<string>;
   affectedNodeIds: Set<string>;
 
-  // Zoom-to-node: set a nodeId to trigger GraphView to pan/zoom to it
-  zoomToNodeId: string | null;
-
   // Focus mode: isolate a node's 1-hop neighborhood
   focusNodeId: string | null;
 
@@ -59,12 +57,12 @@ interface DashboardStore {
   selectNode: (nodeId: string | null) => void;
   navigateToNode: (nodeId: string) => void;
   navigateToNodeInLayer: (nodeId: string) => void;
+  navigateToHistoryIndex: (index: number) => void;
   goBackNode: () => void;
   drillIntoLayer: (layerId: string) => void;
   navigateToOverview: () => void;
   setFocusNode: (nodeId: string | null) => void;
   setSearchQuery: (query: string) => void;
-  toggleLayers: () => void;
   setPersona: (persona: Persona) => void;
   openCodeViewer: (nodeId: string) => void;
   closeCodeViewer: () => void;
@@ -109,8 +107,6 @@ export const useDashboardStore = create<DashboardStore>()((set, get) => ({
   searchEngine: null,
   searchMode: "fuzzy",
 
-  showLayers: false,
-
   navigationLevel: "overview",
   activeLayerId: null,
   codeViewerOpen: false,
@@ -126,7 +122,6 @@ export const useDashboardStore = create<DashboardStore>()((set, get) => ({
   changedNodeIds: new Set<string>(),
   affectedNodeIds: new Set<string>(),
 
-  zoomToNodeId: null,
   focusNodeId: null,
   nodeHistory: [],
 
@@ -152,7 +147,7 @@ export const useDashboardStore = create<DashboardStore>()((set, get) => ({
       // Push current node to history before navigating away
       set({
         selectedNodeId: nodeId,
-        nodeHistory: [...nodeHistory, selectedNodeId],
+        nodeHistory: [...nodeHistory, selectedNodeId].slice(-MAX_HISTORY),
       });
     } else {
       set({ selectedNodeId: nodeId });
@@ -169,14 +164,13 @@ export const useDashboardStore = create<DashboardStore>()((set, get) => ({
     const layerId = findNodeLayer(graph, nodeId);
     const newHistory =
       selectedNodeId && nodeId !== selectedNodeId
-        ? [...nodeHistory, selectedNodeId]
+        ? [...nodeHistory, selectedNodeId].slice(-MAX_HISTORY)
         : nodeHistory;
     if (layerId) {
       set({
         navigationLevel: "layer-detail",
         activeLayerId: layerId,
         selectedNodeId: nodeId,
-        zoomToNodeId: nodeId,
         focusNodeId: null,
         codeViewerOpen: false,
         codeViewerNodeId: null,
@@ -185,33 +179,40 @@ export const useDashboardStore = create<DashboardStore>()((set, get) => ({
     } else {
       set({
         selectedNodeId: nodeId,
-        zoomToNodeId: nodeId,
         nodeHistory: newHistory,
       });
     }
   },
 
+  navigateToHistoryIndex: (index) => {
+    const { nodeHistory, graph } = get();
+    if (!graph || index < 0 || index >= nodeHistory.length) return;
+    const targetId = nodeHistory[index];
+    const newHistory = nodeHistory.slice(0, index);
+    const layerId = findNodeLayer(graph, targetId);
+    set({
+      selectedNodeId: targetId,
+      nodeHistory: newHistory,
+      ...(layerId ? { navigationLevel: "layer-detail" as const, activeLayerId: layerId } : {}),
+    });
+  },
+
   goBackNode: () => {
-    const { nodeHistory } = get();
-    if (nodeHistory.length === 0) return;
+    const { nodeHistory, graph } = get();
+    if (nodeHistory.length === 0 || !graph) return;
     const prevNodeId = nodeHistory[nodeHistory.length - 1];
     const newHistory = nodeHistory.slice(0, -1);
-    // Navigate to previous node WITHOUT pushing to history
-    const { graph } = get();
-    if (!graph) return;
     const layerId = findNodeLayer(graph, prevNodeId);
     if (layerId) {
       set({
         navigationLevel: "layer-detail",
         activeLayerId: layerId,
         selectedNodeId: prevNodeId,
-        zoomToNodeId: prevNodeId,
         nodeHistory: newHistory,
       });
     } else {
       set({
         selectedNodeId: prevNodeId,
-        zoomToNodeId: prevNodeId,
         nodeHistory: newHistory,
       });
     }
@@ -252,8 +253,6 @@ export const useDashboardStore = create<DashboardStore>()((set, get) => ({
     const searchResults = engine.search(query);
     set({ searchQuery: query, searchResults });
   },
-
-  toggleLayers: () => set((state) => ({ showLayers: !state.showLayers })),
 
   setPersona: (persona) => set({ persona }),
 

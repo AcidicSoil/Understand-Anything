@@ -1,4 +1,3 @@
-import { useCallback, useEffect } from "react";
 import { useDashboardStore } from "../store";
 
 export default function Breadcrumb() {
@@ -8,21 +7,6 @@ export default function Breadcrumb() {
   const navigateToOverview = useDashboardStore((s) => s.navigateToOverview);
 
   const activeLayer = graph?.layers.find((l) => l.id === activeLayerId);
-
-  // Escape key to go back to overview
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape" && navigationLevel === "layer-detail") {
-        navigateToOverview();
-      }
-    },
-    [navigationLevel, navigateToOverview],
-  );
-
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
 
   return (
     <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
