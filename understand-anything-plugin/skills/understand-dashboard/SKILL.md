@@ -22,11 +22,22 @@ Start the Understand Anything dashboard to visualize the knowledge graph for the
 3. Find the dashboard code. The dashboard is at `packages/dashboard/` relative to this plugin's root directory. Check these paths in order and use the first that exists:
    - `~/.understand-anything-plugin/packages/dashboard/` (universal symlink, all installs)
    - `${CLAUDE_PLUGIN_ROOT}/packages/dashboard/` (Claude Code plugin)
+   - Two levels up from `~/.hermes/skills/understand-dashboard` (Hermes local install)
+   - Two levels up from `~/.agents/skills/understand-dashboard` (shared-agent install)
    - Two levels up from this skill file's real path: `../../packages/dashboard/` (self-relative fallback)
 
    Use the Bash tool to resolve:
    ```bash
-   SKILL_REAL=$(realpath ~/.agents/skills/understand-dashboard 2>/dev/null || readlink -f ~/.agents/skills/understand-dashboard 2>/dev/null || echo "")
+   SKILL_REAL=""
+   for skill_dir in \
+     "$HOME/.hermes/skills/understand-dashboard" \
+     "$HOME/.agents/skills/understand-dashboard"; do
+     if [ -e "$skill_dir" ]; then
+       SKILL_REAL=$(realpath "$skill_dir" 2>/dev/null || readlink -f "$skill_dir" 2>/dev/null || echo "")
+       [ -n "$SKILL_REAL" ] && break
+     fi
+   done
+
    SELF_RELATIVE=$([ -n "$SKILL_REAL" ] && cd "$SKILL_REAL/../.." 2>/dev/null && pwd || echo "")
 
    PLUGIN_ROOT=""
@@ -40,7 +51,7 @@ Start the Understand Anything dashboard to visualize the knowledge graph for the
    done
 
    if [ -z "$PLUGIN_ROOT" ]; then
-     echo "Error: Cannot find the understand-anything plugin root. Make sure you followed the installation instructions and that ~/.understand-anything-plugin exists."
+     echo "Error: Cannot find the understand-anything plugin root. Make sure you followed the installation instructions and that ~/.understand-anything-plugin exists, or that the skill is installed under ~/.hermes/skills/."
      exit 1
    fi
    ```

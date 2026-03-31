@@ -168,6 +168,13 @@ Tell Pi Agent:
 Fetch and follow instructions from https://raw.githubusercontent.com/Lum1104/Understand-Anything/refs/heads/main/.pi/INSTALL.md
 ```
 
+### Hermes Agent
+
+Tell Hermes Agent:
+```text
+Fetch and follow instructions from https://raw.githubusercontent.com/Lum1104/Understand-Anything/refs/heads/main/.hermes/INSTALL.md
+```
+
 ### Platform Compatibility
 
 | Platform | Status | Install Method |
@@ -180,6 +187,7 @@ Fetch and follow instructions from https://raw.githubusercontent.com/Lum1104/Und
 | VS Code + GitHub Copilot | ✅ Supported | Auto-discovery |
 | Antigravity | ✅ Supported | AI-driven install |
 | Gemini CLI | ✅ Supported | AI-driven install |
+| Hermes Agent | ✅ Supported | AI-driven install |
 | Pi Agent | ✅ Supported | AI-driven install |
 
 ---
